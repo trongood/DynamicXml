@@ -1,0 +1,6 @@
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\DynamicXmlHelper.exe.config
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\DynamicXmlHelper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\DynamicXmlHelper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\obj\Debug\DynamicXmlHelper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\obj\Debug\DynamicXmlHelper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\obj\Debug\DynamicXmlHelper.csprojResolveAssemblyReference.cache

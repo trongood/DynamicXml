@@ -1,0 +1,8 @@
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\bin\Debug\Tests.dll
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\bin\Debug\Tests.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\bin\Debug\Moq.xml
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\obj\Debug\Tests.csprojResolveAssemblyReference.cache
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\obj\Debug\Tests.dll
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\obj\Debug\Tests.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\bin\Debug\XmlDynamicWrapper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\Tests\bin\Debug\XmlDynamicWrapper.pdb
