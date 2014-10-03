@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
-using XmlDynamicWrapper.Models;
 
-namespace Tests
+namespace Tests.XDynamicTests
 {
     [TestClass]
     public class TryGetMember
@@ -16,22 +14,33 @@ namespace Tests
         {
             const string xStr =@"<Root><Description>description text</Description></Root>";
             var xElement = XElement.Parse(xStr);
-            
-            var mockDynamicXml = new Mock<DynamicXml>(xElement) {CallBase = true};
-            dynamic dyn = mockDynamicXml.Object;
 
-            var desc = dyn.Description;
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
+
+            var desc = dXml.Description;
             Assert.AreEqual(desc, "description text");
+        }
+        
+        [TestMethod]
+        public void ElementWithPrimitiveTextValueAndIncorrectName_ReturnsNull()
+        {
+            const string xStr = @"<Root><Description>description text</Description></Root>";
+            var xElement = XElement.Parse(xStr);
+
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
+
+            var descFake = dXml.DescriptionFake;
+            Assert.IsNull(descFake);
         }
 
         [TestMethod]
         public void ElementWithIntValue_ReturnInt()
         {
-            var xStr = string.Format(@"<Root><Id {0}=""System.Int32"">12345</Id></Root>", DynamicXml.DataTypeAttributeName);
+            var xStr = string.Format(@"<Root><Id {0}=""System.Int32"">12345</Id></Root>", XmlDynamicWrapper.XDynamic.DataTypeAttributeName);
 
             var xElement = XElement.Parse(xStr);
             
-            dynamic dynamicXml = new DynamicXml(xElement);
+            dynamic dynamicXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.AreEqual(dynamicXml.Id, 12345);
         }
@@ -49,7 +58,7 @@ namespace Tests
 
             xElement.Add(xChildElement);
 
-            dynamic dynamicXml = new DynamicXml(xElement);
+            dynamic dynamicXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.IsNotNull(dynamicXml.Struct);
             Assert.IsInstanceOfType(dynamicXml.Struct, typeof(ExpandoObject));
@@ -75,17 +84,17 @@ namespace Tests
 </Root>";
             var xElement = XElement.Parse(xStr);
 
-            dynamic dXml = new DynamicXml(xElement);
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.IsNotNull(dXml);
-            Assert.IsInstanceOfType(dXml, typeof(DynamicXml));
+            Assert.IsInstanceOfType(dXml, typeof(XmlDynamicWrapper.XDynamic));
 
             Assert.AreEqual(dXml.Id, "1202");
             Assert.AreEqual(dXml.Name, "name value");
             Assert.AreEqual(dXml.Description, "description value");
             
             Assert.IsNotNull(dXml.Child);
-            Assert.IsInstanceOfType(dXml.Child, typeof(DynamicXml));
+            Assert.IsInstanceOfType(dXml.Child, typeof(XmlDynamicWrapper.XDynamic));
             
             Assert.AreEqual(dXml.Child.Id, "123");
             Assert.AreEqual(dXml.Child.Name, "child name value");
@@ -126,15 +135,15 @@ namespace Tests
 </Root>";
             var xElement = XElement.Parse(xStr);
 
-            dynamic dXml = new DynamicXml(xElement);
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
             
             Assert.IsNotNull(dXml);
             Assert.IsInstanceOfType(dXml.Address, typeof(List<object>));
             foreach (var iAddress in dXml.Address)
             {
-                Assert.IsInstanceOfType(iAddress, typeof(DynamicXml));
+                Assert.IsInstanceOfType(iAddress, typeof(XmlDynamicWrapper.XDynamic));
             }
-            Assert.IsInstanceOfType(dXml.NotPartOfList, typeof(DynamicXml));
+            Assert.IsInstanceOfType(dXml.NotPartOfList, typeof(XmlDynamicWrapper.XDynamic));
             Assert.AreEqual(dXml.NotPartOfList.Id, "0");
             Assert.AreEqual(dXml.NotPartOfList.Name, "name value");
             Assert.AreEqual(dXml.NotPartOfList.Description, "description value");
@@ -171,13 +180,13 @@ namespace Tests
 </Root>";
             var xElement = XElement.Parse(xStr);
 
-            dynamic dXml = new DynamicXml(xElement);
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.IsNotNull(dXml);
             Assert.IsInstanceOfType(dXml.AddressList, typeof(List<object>));
             foreach (var iAddress in dXml.AddressList)
             {
-                Assert.IsInstanceOfType(iAddress, typeof(DynamicXml));
+                Assert.IsInstanceOfType(iAddress, typeof(XmlDynamicWrapper.XDynamic));
             }
         }
 
@@ -216,16 +225,16 @@ namespace Tests
 </Root>";
             var xElement = XElement.Parse(xStr);
 
-            dynamic dXml = new DynamicXml(xElement);
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.IsNotNull(dXml);
-            Assert.IsInstanceOfType(dXml.AddressList, typeof(DynamicXml));
-            Assert.IsInstanceOfType(dXml.AddressList.NotPartOfList, typeof(DynamicXml));
+            Assert.IsInstanceOfType(dXml.AddressList, typeof(XmlDynamicWrapper.XDynamic));
+            Assert.IsInstanceOfType(dXml.AddressList.NotPartOfList, typeof(XmlDynamicWrapper.XDynamic));
             Assert.IsInstanceOfType(dXml.AddressList.Address, typeof(List<object>));
 
             foreach (var iAddress in dXml.AddressList.Address)
             {
-                Assert.IsInstanceOfType(iAddress, typeof(DynamicXml));
+                Assert.IsInstanceOfType(iAddress, typeof(XmlDynamicWrapper.XDynamic));
             }
         }
 
@@ -262,18 +271,18 @@ namespace Tests
 	    </NotPartOfList>
     </AddressList>
 </Root>";
-            var xElement = XElement.Parse(string.Format(xStr, DynamicXml.DataTypeAttributeName));
+            var xElement = XElement.Parse(string.Format(xStr, XmlDynamicWrapper.XDynamic.DataTypeAttributeName));
 
-            dynamic dXml = new DynamicXml(xElement);
+            dynamic dXml = new XmlDynamicWrapper.XDynamic(xElement);
 
             Assert.IsNotNull(dXml);
             Assert.IsInstanceOfType(dXml.AddressList, typeof(List<object>));
             foreach (var iAddress in dXml.AddressList)
             {
-                Assert.IsInstanceOfType(iAddress, typeof(DynamicXml));
+                Assert.IsInstanceOfType(iAddress, typeof(XmlDynamicWrapper.XDynamic));
             }
             dynamic lastElementInList = dXml.AddressList[dXml.AddressList.Count - 1];
-            Assert.IsInstanceOfType(lastElementInList, typeof(DynamicXml));
+            Assert.IsInstanceOfType(lastElementInList, typeof(XmlDynamicWrapper.XDynamic));
             Assert.AreEqual(lastElementInList.NewId, 5);
             Assert.AreEqual(lastElementInList.NewName, "5 name value");
             Assert.AreEqual(lastElementInList.NewDescription, "5 description value");

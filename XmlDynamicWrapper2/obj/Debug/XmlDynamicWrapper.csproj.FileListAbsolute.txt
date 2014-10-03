@@ -1,0 +1,11 @@
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\XmlDynamicWrapper.exe.config
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\XmlDynamicWrapper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\bin\Debug\XmlDynamicWrapper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\obj\Debug\XmlDynamicWrapper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\DynamicXml\obj\Debug\XmlDynamicWrapper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\XmlDynamicWrapper.exe.config
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\XmlDynamicWrapper.exe
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\XmlDynamicWrapper.pdb
+C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.csprojResolveAssemblyReference.cache

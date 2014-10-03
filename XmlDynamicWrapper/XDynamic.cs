@@ -5,9 +5,9 @@ using System.Dynamic;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace XmlDynamicWrapper.Models
+namespace XmlDynamicWrapper
 {
-    public class DynamicXml : DynamicObject
+    public class XDynamic : DynamicObject
     {
         #region enums
 
@@ -30,7 +30,7 @@ namespace XmlDynamicWrapper.Models
 
         #region private fields
 
-        private readonly Dictionary<string, object> _dictionary = new Dictionary<string, object>();
+        private readonly Dictionary<string, object> _cache = new Dictionary<string, object>();
 
         private readonly XElement _xElement;
 
@@ -44,11 +44,24 @@ namespace XmlDynamicWrapper.Models
 
         #region construct
 
-        public DynamicXml(XElement xElement)
+        public XDynamic(XElement xElement)
         {
             _xElement = xElement;
             if (_xElement == null)
                 throw new ArgumentNullException("xElement");
+        }
+
+        public XDynamic(string xName)
+        {
+            if (string.IsNullOrEmpty(xName))
+                throw new ArgumentNullException("xName");
+
+            _xElement = new XElement(xName);
+        }
+
+        public XDynamic()
+        {
+            _xElement = new XElement("root");
         }
 
         #endregion
@@ -132,7 +145,7 @@ namespace XmlDynamicWrapper.Models
         protected internal IList<object> ParseElementsAsList_ListWithParent(IList<XElement> elements)
         {
             if (elements.Count != 1)
-                throw new Exception("ParseElementsAsList_ListWithParent: elements.Count != 1");
+                throw new InvalidOperationException("ParseElementsAsList_ListWithParent: elements.Count != 1");
 
             var childElements = elements.Single().Elements();
 
@@ -159,10 +172,10 @@ namespace XmlDynamicWrapper.Models
                     return ParseElementAsSingle_FieldsExpando(element);
 
                 case XElementSingleTypeEnum.DynamicXml:
-                    return new DynamicXml(element);
+                    return new XDynamic(element);
 
                 default:
-                    throw new NotImplementedException();
+                    throw new NotImplementedException("XmlDynamicWrapper.XDynamic.ParseElementAsSingle: ");
             }
         }
 
@@ -170,24 +183,31 @@ namespace XmlDynamicWrapper.Models
         {
             var dataTypeAttribute = element.Attribute(DataTypeAttributeName);
             if (dataTypeAttribute == null)
-                throw new Exception(
+                throw new InvalidOperationException(
                     string.Format("ParseElementAsSingle_PrimitiveByAttribute: can't find attribute by name = {0}",
                         DataTypeAttributeName));
 
             if (string.IsNullOrEmpty(dataTypeAttribute.Value))
-                throw new Exception("ParseElementAsSingle_PrimitiveByAttribute: can't find attribute value");
+                throw new InvalidOperationException("ParseElementAsSingle_PrimitiveByAttribute: can't find attribute value");
 
             var type = Type.GetType(dataTypeAttribute.Value);
             if (type == null)
-                throw new Exception(
+                throw new InvalidOperationException(
                     string.Format("ParseElementAsSingle_PrimitiveByAttribute: can't load type by type name = {0}",
                         dataTypeAttribute.Value));
 
             var elementValue = element.Value;
             if (elementValue == null)
-                throw new Exception("ParseElementAsSingle_PrimitiveByAttribute: element value is null");
+                throw new InvalidOperationException("ParseElementAsSingle_PrimitiveByAttribute: element value is null");
 
-            return Convert.ChangeType(elementValue, type);
+            try
+            {
+                return Convert.ChangeType(elementValue, type);
+            }
+            catch (Exception)
+            {
+                return elementValue;
+            }
         }
 
         protected internal object ParseElementAsSingle_FieldsExpando(XElement element)
@@ -195,7 +215,7 @@ namespace XmlDynamicWrapper.Models
             var fieldAttributes = element.Attributes().Where(x => x.Name != DataTypeAttributeName).ToList();
             if (fieldAttributes.Count == 0)
             {
-                throw new Exception("ParseElementAsSingle_FieldsExpando: no data attributes");
+                throw new InvalidOperationException("ParseElementAsSingle_FieldsExpando: no data attributes");
             }
 
             var fieldsDictionary = new ExpandoObject() as IDictionary<string, Object>;
@@ -209,6 +229,91 @@ namespace XmlDynamicWrapper.Models
 
         #endregion
 
+        protected internal object GetValue(string name)
+        {
+            object ret = null;
+            if (_cache.TryGetValue(name, out ret)) return ret;
+
+            var xTargetElements = _xElement.Elements(name).ToList();
+            if (xTargetElements.Count == 0) return null;
+
+            var listType = GetXElementListType(xTargetElements);
+            if (listType.HasValue)
+            {
+                ret = ParseElementsAsList(xTargetElements, listType.Value);
+                _cache[name] = ret;
+                return ret;
+            }
+
+            ret = ParseElementAsSingle(xTargetElements.Single());
+            _cache[name] = ret;
+
+            return ret;
+        }
+
+        protected internal void RemoveMember(string name)
+        {
+            _cache.Remove(name);
+            var elementsToRemove = _xElement.Elements(name).ToList();
+            if (elementsToRemove.Any())
+            {
+                foreach (var xElement in elementsToRemove)
+                {
+                    xElement.Remove();
+                }
+            }
+        }
+
+        protected internal void SetValue_ValueType(object value, string name)
+        {
+            XElement targetXElement = null;
+
+            var elements = _xElement.Elements(name).ToList();
+            if (elements.Count == 0)
+            {
+                targetXElement = new XElement(name);
+                _xElement.Add(targetXElement);
+            }
+
+            if (elements.Count > 1)
+            {
+                foreach (var elementToDelete in elements.Skip(1))
+                {
+                    elementToDelete.Remove();
+                }
+            }
+
+            targetXElement = elements.Single();
+
+            if (targetXElement == null)
+                throw new InvalidOperationException("XmlDynamicWrapper.XDynamic.SetValue_ValueType: targetXElement is null");
+
+            foreach (var childElementsToDelete in targetXElement.Elements())
+            {
+                childElementsToDelete.Remove();
+            }
+
+            var attributesToDelete = targetXElement.Attributes().Where(x => x.Name != DataTypeAttributeName).ToList();
+            foreach (var xAttributeToDelete in attributesToDelete)
+            {
+                xAttributeToDelete.Remove();
+            }
+
+            var dataTypeAttribute = targetXElement.Attribute(DataTypeAttributeName);
+            if (dataTypeAttribute == null)
+            {
+                targetXElement.Add(new XAttribute(DataTypeAttributeName, value.GetType().ToString()));
+            }
+            else
+            {
+                dataTypeAttribute.Value = value.GetType().ToString();
+            }
+
+            targetXElement.Value = value.ToString();
+
+            _cache[name] = value;
+        }
+        
         #endregion
 
         #region DynamicObject
@@ -217,21 +322,8 @@ namespace XmlDynamicWrapper.Models
         {
             var name = binder.Name;
 
-            if (_dictionary.TryGetValue(name, out result)) return true;
+            result = GetValue(name);
 
-            var xTargetElements = _xElement.Elements(name).ToList();
-            if (xTargetElements.Count == 0) return false;
-
-            var listType = GetXElementListType(xTargetElements);
-            if (listType.HasValue)
-            {
-                result = ParseElementsAsList(xTargetElements, listType.Value);
-                _dictionary[name] = result;
-                return true;
-            }
-
-            result = ParseElementAsSingle(xTargetElements.Single());
-            _dictionary[name] = result;
             return true;
         }
 
@@ -239,31 +331,22 @@ namespace XmlDynamicWrapper.Models
         {
             var name = binder.Name;
 
-            var xElementsList = _xElement.Elements(name).ToList();
-
-            if (xElementsList.Any())
+            if (value == null)
             {
-                var listType = GetXElementListType(xElementsList);
-                if (listType.HasValue)
-                {
-                    if (!(value is Array) && !(value is IList))
-                    {
-                        throw new InvalidCastException(
-                            string.Format("Incorrect type ({0}) for Property = {1}",
-                            value.GetType(),
-                            name));
-                    }
+                RemoveMember(name);
+                return true;
+            }
 
-                    throw new NotImplementedException();
-                }
+            if (value is IEnumerable)
+            {
 
-                var singleType = GetXElementSingleType(xElementsList.Single());
-                
+            }
+
+            if (value.GetType().IsValueType)
+            {
+                SetValue_ValueType(value, name);
             }
             
-            
-            _dictionary[binder.Name] = value;
-
             return true;
         }
 

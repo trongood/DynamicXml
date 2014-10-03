@@ -56,15 +56,16 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="TryGetMember.cs" />
+    <Compile Include="XDynamicTests\TryGetMember.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="XDynamicTests\TrySetMember.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\XmlDynamicWrapper\XmlDynamicWrapper.csproj">
-      <Project>{4d17c02d-e61a-4f08-828e-127256d63118}</Project>
+      <Project>{1cbe02fe-6486-4725-8f7f-23d2e22d93d9}</Project>
       <Name>XmlDynamicWrapper</Name>
     </ProjectReference>
   </ItemGroup>
