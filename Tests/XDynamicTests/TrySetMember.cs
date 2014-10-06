@@ -17,10 +17,10 @@ namespace Tests.XDynamicTests
             //act
             dynamic xDynamic = new XDynamic(xRoot);
             xDynamic.Id = 123;
-            
+
             //assert
             Assert.AreEqual(expectedXString, xRoot.ToString(SaveOptions.DisableFormatting));
-            }
+        }
 
         [TestMethod]
         public void NullValue_ActualizeRemoveXElementImmediately()
@@ -30,7 +30,7 @@ namespace Tests.XDynamicTests
                     XDynamic.DataTypeAttributeName));
 
             const string expectedXString = @"<root />";
-            
+
             //act
             dynamic xDynamic = new XDynamic(xRoot);
             xDynamic.Id = null;

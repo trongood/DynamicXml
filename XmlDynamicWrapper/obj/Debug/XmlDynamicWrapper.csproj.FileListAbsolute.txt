@@ -3,3 +3,8 @@ C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\Xml
 C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.dll
 C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.pdb
 C:\Users\td.DMONLINE\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.csprojResolveAssemblyReference.cache
+C:\Users\TheGooo\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\XmlDynamicWrapper.dll
+C:\Users\TheGooo\Documents\GitHub\DynamicXml\XmlDynamicWrapper\bin\Debug\XmlDynamicWrapper.pdb
+C:\Users\TheGooo\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.csprojResolveAssemblyReference.cache
+C:\Users\TheGooo\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.dll
+C:\Users\TheGooo\Documents\GitHub\DynamicXml\XmlDynamicWrapper\obj\Debug\XmlDynamicWrapper.pdb
