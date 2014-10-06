@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -32,8 +31,6 @@ namespace XmlDynamicWrapper
 
         private readonly Dictionary<string, object> _cache = new Dictionary<string, object>();
 
-        private readonly XElement _xElement;
-
         #endregion
 
         #region const
@@ -46,8 +43,8 @@ namespace XmlDynamicWrapper
 
         public XDynamic(XElement xElement)
         {
-            _xElement = xElement;
-            if (_xElement == null)
+            XElement = xElement;
+            if (XElement == null)
                 throw new ArgumentNullException("xElement");
         }
 
@@ -56,13 +53,19 @@ namespace XmlDynamicWrapper
             if (string.IsNullOrEmpty(xName))
                 throw new ArgumentNullException("xName");
 
-            _xElement = new XElement(xName);
+            XElement = new XElement(xName);
         }
 
         public XDynamic()
         {
-            _xElement = new XElement("root");
+            XElement = new XElement("root");
         }
+
+        #endregion
+
+        #region properties
+
+        public readonly XElement XElement;
 
         #endregion
 
@@ -234,7 +237,7 @@ namespace XmlDynamicWrapper
             object ret = null;
             if (_cache.TryGetValue(name, out ret)) return ret;
 
-            var xTargetElements = _xElement.Elements(name).ToList();
+            var xTargetElements = XElement.Elements(name).ToList();
             if (xTargetElements.Count == 0) return null;
 
             var listType = GetXElementListType(xTargetElements);
@@ -254,7 +257,7 @@ namespace XmlDynamicWrapper
         protected internal void RemoveMember(string name)
         {
             _cache.Remove(name);
-            var elementsToRemove = _xElement.Elements(name).ToList();
+            var elementsToRemove = XElement.Elements(name).ToList();
             if (elementsToRemove.Any())
             {
                 foreach (var xElement in elementsToRemove)
@@ -264,26 +267,54 @@ namespace XmlDynamicWrapper
             }
         }
 
+        protected internal void SetValue(object value, string name)
+        {
+            if (value == null)
+            {
+                RemoveMember(name);
+                return;
+            }
+
+            if (value.GetType().IsValueType)
+            {
+                SetValue_ValueType(value, name);
+            }
+
+            var xDynamicValue = value as XDynamic;
+            if (xDynamicValue != null)
+            {
+                SetValue_XDynamicType(xDynamicValue);
+            }
+
+            var values = (value as IEnumerable<object>);
+            if (values != null)
+            {
+                SetValue_EnumerableType(values, name);
+            }
+        }
+
         protected internal void SetValue_ValueType(object value, string name)
         {
             XElement targetXElement = null;
 
-            var elements = _xElement.Elements(name).ToList();
+            var elements = XElement.Elements(name).ToList();
             if (elements.Count == 0)
             {
                 targetXElement = new XElement(name);
-                _xElement.Add(targetXElement);
+                XElement.Add(targetXElement);
             }
 
-            if (elements.Count > 1)
+            if (elements.Count >= 1)
             {
-                foreach (var elementToDelete in elements.Skip(1))
+                if (elements.Count > 1)
                 {
-                    elementToDelete.Remove();
+                    foreach (var elementToDelete in elements.Skip(1))
+                    {
+                        elementToDelete.Remove();
+                    }
                 }
+                targetXElement = elements.Single();
             }
-
-            targetXElement = elements.Single();
 
             if (targetXElement == null)
                 throw new InvalidOperationException("XmlDynamicWrapper.XDynamic.SetValue_ValueType: targetXElement is null");
@@ -313,7 +344,24 @@ namespace XmlDynamicWrapper
 
             _cache[name] = value;
         }
-        
+
+        protected internal void SetValue_XDynamicType(XDynamic value)
+        {
+            var existedIndex = XElement.Elements(value.XElement.Name).ToList().IndexOf(value.XElement);
+            if (existedIndex < 0)
+            {
+                XElement.Add(value.XElement);
+            }
+        }
+
+        protected internal void SetValue_EnumerableType(IEnumerable<object> values, string name)
+        {
+            foreach (var iValue in values)
+            {
+                SetValue(iValue, name);
+            }
+        }
+
         #endregion
 
         #region DynamicObject
@@ -331,22 +379,8 @@ namespace XmlDynamicWrapper
         {
             var name = binder.Name;
 
-            if (value == null)
-            {
-                RemoveMember(name);
-                return true;
-            }
+            SetValue(value, name);
 
-            if (value is IEnumerable)
-            {
-
-            }
-
-            if (value.GetType().IsValueType)
-            {
-                SetValue_ValueType(value, name);
-            }
-            
             return true;
         }
 

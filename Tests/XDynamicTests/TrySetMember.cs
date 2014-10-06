@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System;
+using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using XmlDynamicWrapper;
 
@@ -12,15 +13,16 @@ namespace Tests.XDynamicTests
         {
             var xRoot = XElement.Parse("<root />");
 
-            var expectedXString = string.Format(@"<root><Id {0}=""System.Int32"">123</Id></root>", XDynamic.DataTypeAttributeName);
+            var expectedXString = string.Format(@"<root><Id {0}=""System.Int32"">123</Id></root>",
+                XDynamic.DataTypeAttributeName);
 
             //act
             dynamic xDynamic = new XDynamic(xRoot);
             xDynamic.Id = 123;
-            
+
             //assert
             Assert.AreEqual(expectedXString, xRoot.ToString(SaveOptions.DisableFormatting));
-            }
+        }
 
         [TestMethod]
         public void NullValue_ActualizeRemoveXElementImmediately()
