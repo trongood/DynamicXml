@@ -32,7 +32,7 @@ namespace Tests.XDynamicTests
                     XDynamic.DataTypeAttributeName));
 
             const string expectedXString = @"<root />";
-            
+
             //act
             dynamic xDynamic = new XDynamic(xRoot);
             xDynamic.Id = null;
