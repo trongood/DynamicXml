@@ -3,10 +3,10 @@ using System.Xml.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using XmlDynamicWrapper;
 
-namespace Tests.XDynamicTests
+namespace Tests.XDynamicTests.TrySetMember
 {
     [TestClass]
-    public class TrySetMember
+    public class Value
     {
         [TestMethod]
         public void ValueTypeAssign_ActualizeXElementImmediately()

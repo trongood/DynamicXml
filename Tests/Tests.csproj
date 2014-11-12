@@ -56,9 +56,12 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="XDynamicTests\TryGetMember.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="XDynamicTests\TrySetMember.cs" />
+    <Compile Include="XDynamicTests\TryGetMember\Object.cs" />
+    <Compile Include="XDynamicTests\TryGetMember\IList.cs" />
+    <Compile Include="XDynamicTests\TryGetMember\Value.cs" />
+    <Compile Include="XDynamicTests\TrySetMember\Object.cs" />
+    <Compile Include="XDynamicTests\TrySetMember\Value.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

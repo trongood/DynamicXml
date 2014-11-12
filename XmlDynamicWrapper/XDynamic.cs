@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Dynamic;
 using System.Linq;
 using System.Xml.Linq;
@@ -13,7 +14,7 @@ namespace XmlDynamicWrapper
         protected internal enum XElementListTypeEnum
         {
             ListWithoutParent = 1,
-            ListDefinedByAttribute = 2,
+            ArrayDefinedByAttribute = 2,
             List = 3
         }
 
@@ -21,7 +22,7 @@ namespace XmlDynamicWrapper
         {
             Text = 1,
             ValueFromAttribute = 2,
-            FieldsExpando = 3,
+            Fields = 3,
             DynamicXml = 4
         }
 
@@ -29,7 +30,9 @@ namespace XmlDynamicWrapper
 
         #region private fields
 
-        private readonly Dictionary<string, object> _cache = new Dictionary<string, object>();
+        private readonly Dictionary<string, WeakReference> _cache = new Dictionary<string, WeakReference>();
+
+        private WeakReference<XElement> _xElement;
 
         #endregion
 
@@ -65,13 +68,99 @@ namespace XmlDynamicWrapper
 
         #region properties
 
-        public readonly XElement XElement;
+        public XElement XElement
+        {
+            get
+            {
+                XElement xRet = null;
+                if (!_xElement.TryGetTarget(out xRet))
+                {
+                    throw new NullReferenceException("XDynamic.XElement: can't find object by reference - create wrapper again");
+                }
+                return xRet;
+            }
+
+            set
+            {
+                if (value == null) throw new ArgumentNullException("value");
+                _xElement = new WeakReference<XElement>(value);
+            }
+        }
 
         #endregion
 
         #region internal logic
 
-        protected internal XElementListTypeEnum? GetXElementListType(IList<XElement> elements)
+        private void RemoveMember(string name, XElement xParent)
+        {
+            _cache.Remove(name);
+            if (xParent == null)
+                xParent = XElement;
+
+            var elementsToRemove = xParent.Elements(name).ToList();
+            if (elementsToRemove.Any())
+            {
+                foreach (var xRec in elementsToRemove)
+                {
+                    xRec.Remove();
+                }
+            }
+        }
+
+        #region cache
+
+        private bool TryGetFromCache(string name, out object value)
+        {
+            WeakReference ret = null;
+            if (_cache.TryGetValue(name, out ret) && ret.IsAlive)
+            {
+                value = ret.Target;
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        private void SetToCache(string name, object value)
+        {
+            _cache[name] = new WeakReference(value, false);
+        }
+
+        #endregion
+
+        #region get value
+
+        protected internal virtual object GetValue(string name, XElement xParent)
+        {
+            object ret;
+
+            var xTargetElements = xParent.Elements(name).ToList();
+            if (xTargetElements.Count == 0)
+            {
+                var attributes = xParent.Attributes(name).ToList();
+                if (attributes.Any())
+                {
+                    return attributes.First().Value;
+                }
+
+                return null;
+            }
+
+            var listType = GetXElementListType(xTargetElements);
+            if (listType.HasValue)
+            {
+                var list = ParseElementsAsList(xTargetElements, listType.Value);
+                ret = list;
+                return ret;
+            }
+
+            ret = ParseElementAsSingle(xTargetElements.Single());
+            
+            return ret;
+        }
+        
+        private XElementListTypeEnum? GetXElementListType(IList<XElement> elements)
         {
             if (elements.Count > 1) return XElementListTypeEnum.ListWithoutParent;
 
@@ -80,10 +169,9 @@ namespace XmlDynamicWrapper
             var dataTypeAttribute = xElement.Attributes(DataTypeAttributeName).FirstOrDefault();
             if (dataTypeAttribute != null)
             {
-                if (dataTypeAttribute.Value.Equals("list", StringComparison.InvariantCultureIgnoreCase) ||
-                    dataTypeAttribute.Value.Equals("array", StringComparison.InvariantCultureIgnoreCase))
+                if (dataTypeAttribute.Value.Equals("array", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    return XElementListTypeEnum.ListDefinedByAttribute;
+                    return XElementListTypeEnum.ArrayDefinedByAttribute;
                 }
 
                 return null;
@@ -96,7 +184,7 @@ namespace XmlDynamicWrapper
             return null;
         }
 
-        protected internal XElementSingleTypeEnum GetXElementSingleType(XElement element)
+        private XElementSingleTypeEnum GetXElementSingleType(XElement element)
         {
             if (element.HasElements)
                 return XElementSingleTypeEnum.DynamicXml;
@@ -111,28 +199,21 @@ namespace XmlDynamicWrapper
 
             var fieldAttributes = element.Attributes().Where(x => x.Name != DataTypeAttributeName).ToList();
             return fieldAttributes.Count > 0
-                ? XElementSingleTypeEnum.FieldsExpando
+                ? XElementSingleTypeEnum.Fields
                 : XElementSingleTypeEnum.Text;
         }
-
-        protected internal XElementListTypeEnum? GetObjectListType(object value)
-        {
-            return null;
-        }
-
+        
         #region parse elements as list
 
-        protected internal IList<object> ParseElementsAsList(IList<XElement> elements, XElementListTypeEnum listType)
+        protected internal virtual ObservableCollection<object> ParseElementsAsList(IList<XElement> elements, XElementListTypeEnum listType)
         {
             switch (listType)
             {
                 case XElementListTypeEnum.ListWithoutParent:
                     return ParseElementsAsList_ListWithoutXParent(elements);
 
-                case XElementListTypeEnum.ListDefinedByAttribute:
-                    return ParseElementsAsList_ListWithParent(elements);
-
                 case XElementListTypeEnum.List:
+                case XElementListTypeEnum.ArrayDefinedByAttribute:
                     return ParseElementsAsList_ListWithParent(elements);
 
                 default:
@@ -140,26 +221,26 @@ namespace XmlDynamicWrapper
             }
         }
 
-        protected internal IList<object> ParseElementsAsList_ListWithoutXParent(IEnumerable<XElement> elements)
+        private ObservableCollection<object> ParseElementsAsList_ListWithoutXParent(IEnumerable<XElement> elements)
         {
-            return elements.Select(ParseElementAsSingle).ToList();
+            return new ObservableCollection<object>(elements.Select(ParseElementAsSingle));
         }
 
-        protected internal IList<object> ParseElementsAsList_ListWithParent(IList<XElement> elements)
+        private ObservableCollection<object> ParseElementsAsList_ListWithParent(IList<XElement> elements)
         {
             if (elements.Count != 1)
                 throw new InvalidOperationException("ParseElementsAsList_ListWithParent: elements.Count != 1");
 
             var childElements = elements.Single().Elements();
-
-            return childElements.Select(ParseElementAsSingle).ToList();
+            var ret = new ObservableCollection<object>(childElements.Select(ParseElementAsSingle));
+            return ret;
         }
 
         #endregion
 
         #region parse element as single
 
-        protected internal object ParseElementAsSingle(XElement element)
+        protected internal virtual object ParseElementAsSingle(XElement element)
         {
             var singleType = GetXElementSingleType(element);
 
@@ -171,9 +252,7 @@ namespace XmlDynamicWrapper
                 case XElementSingleTypeEnum.ValueFromAttribute:
                     return ParseElementAsSingle_PrimitiveByAttribute(element);
 
-                case XElementSingleTypeEnum.FieldsExpando:
-                    return ParseElementAsSingle_FieldsExpando(element);
-
+                case XElementSingleTypeEnum.Fields:
                 case XElementSingleTypeEnum.DynamicXml:
                     return new XDynamic(element);
 
@@ -182,7 +261,7 @@ namespace XmlDynamicWrapper
             }
         }
 
-        protected internal object ParseElementAsSingle_PrimitiveByAttribute(XElement element)
+        private object ParseElementAsSingle_PrimitiveByAttribute(XElement element)
         {
             var dataTypeAttribute = element.Attribute(DataTypeAttributeName);
             if (dataTypeAttribute == null)
@@ -212,72 +291,24 @@ namespace XmlDynamicWrapper
                 return elementValue;
             }
         }
-
-        protected internal object ParseElementAsSingle_FieldsExpando(XElement element)
-        {
-            var fieldAttributes = element.Attributes().Where(x => x.Name != DataTypeAttributeName).ToList();
-            if (fieldAttributes.Count == 0)
-            {
-                throw new InvalidOperationException("ParseElementAsSingle_FieldsExpando: no data attributes");
-            }
-
-            var fieldsDictionary = new ExpandoObject() as IDictionary<string, Object>;
-            foreach (var iFieldAttribute in fieldAttributes)
-            {
-                fieldsDictionary.Add(string.Concat("_", iFieldAttribute.Name.ToString()), iFieldAttribute.Value);
-            }
-
-            return fieldsDictionary;
-        }
+        
+        #endregion
 
         #endregion
 
-        protected internal object GetValue(string name)
-        {
-            object ret = null;
-            if (_cache.TryGetValue(name, out ret)) return ret;
+        #region set value
 
-            var xTargetElements = XElement.Elements(name).ToList();
-            if (xTargetElements.Count == 0) return null;
-
-            var listType = GetXElementListType(xTargetElements);
-            if (listType.HasValue)
-            {
-                ret = ParseElementsAsList(xTargetElements, listType.Value);
-                _cache[name] = ret;
-                return ret;
-            }
-
-            ret = ParseElementAsSingle(xTargetElements.Single());
-            _cache[name] = ret;
-
-            return ret;
-        }
-
-        protected internal void RemoveMember(string name)
-        {
-            _cache.Remove(name);
-            var elementsToRemove = XElement.Elements(name).ToList();
-            if (elementsToRemove.Any())
-            {
-                foreach (var xElement in elementsToRemove)
-                {
-                    xElement.Remove();
-                }
-            }
-        }
-
-        protected internal void SetValue(object value, string name)
+        protected internal void SetValue(object value, string name, XElement xParent)
         {
             if (value == null)
             {
-                RemoveMember(name);
+                RemoveMember(name, xParent);
                 return;
             }
 
             if (value.GetType().IsValueType)
             {
-                SetValue_ValueType(value, name);
+                SetValue_ValueType(value, name, xParent);
             }
 
             var xDynamicValue = value as XDynamic;
@@ -289,31 +320,24 @@ namespace XmlDynamicWrapper
             var values = (value as IEnumerable<object>);
             if (values != null)
             {
-                SetValue_EnumerableType(values, name);
+                SetValue_EnumerableType(values, name, xParent);
             }
         }
 
-        protected internal void SetValue_ValueType(object value, string name)
+        protected internal void SetValue_ValueType(object value, string name, XElement xParent, int index = 0)
         {
             XElement targetXElement = null;
 
-            var elements = XElement.Elements(name).ToList();
-            if (elements.Count == 0)
+            var elements = xParent.Elements(name).ToList();
+            if (!elements.Any())
             {
                 targetXElement = new XElement(name);
-                XElement.Add(targetXElement);
+                xParent.Add(targetXElement);
             }
 
-            if (elements.Count >= 1)
+            if (elements.Count > 0)
             {
-                if (elements.Count > 1)
-                {
-                    foreach (var elementToDelete in elements.Skip(1))
-                    {
-                        elementToDelete.Remove();
-                    }
-                }
-                targetXElement = elements.Single();
+                targetXElement = elements.Count - 1 >= index ? elements[index] : new XElement(name);
             }
 
             if (targetXElement == null)
@@ -341,8 +365,6 @@ namespace XmlDynamicWrapper
             }
 
             targetXElement.Value = value.ToString();
-
-            _cache[name] = value;
         }
 
         protected internal void SetValue_XDynamicType(XDynamic value)
@@ -354,13 +376,50 @@ namespace XmlDynamicWrapper
             }
         }
 
-        protected internal void SetValue_EnumerableType(IEnumerable<object> values, string name)
+        protected internal void SetValue_EnumerableType(IEnumerable<object> values, string name, XElement xParent)
         {
+            XElement xArray = null;
+
+            var targetXElements = xParent.Elements(name).ToList();
+            if (targetXElements.Count == 0)
+            {
+                xArray = new XElement(name);
+                xArray.Add(new XAttribute(DataTypeAttributeName, "array"));
+                xParent.Add(xArray);
+            }
+
+            if (xArray == null)
+            {
+                var listType = GetXElementListType(targetXElements);
+                if (!listType.HasValue)
+                {
+                    RemoveMember(name, xParent);
+
+                    xArray = new XElement(name);
+                    xArray.Add(new XAttribute(DataTypeAttributeName, "array"));
+                    xParent.Add(xArray);
+                }
+
+                switch (listType)
+                {
+                    case XElementListTypeEnum.List:
+                    case XElementListTypeEnum.ArrayDefinedByAttribute:
+                        xArray = targetXElements.Single();
+                        break;
+
+                    case XElementListTypeEnum.ListWithoutParent:
+                        xArray = xParent;
+                        break;
+                }
+            }
+
             foreach (var iValue in values)
             {
-                SetValue(iValue, name);
+                SetValue(iValue, name, xArray);
             }
         }
+
+        #endregion
 
         #endregion
 
@@ -370,7 +429,11 @@ namespace XmlDynamicWrapper
         {
             var name = binder.Name;
 
-            result = GetValue(name);
+            if (TryGetFromCache(name, out result)) return true;
+
+            result = GetValue(name, XElement);
+
+            SetToCache(name, result);
 
             return true;
         }
@@ -379,7 +442,7 @@ namespace XmlDynamicWrapper
         {
             var name = binder.Name;
 
-            SetValue(value, name);
+            SetValue(value, name, XElement);
 
             return true;
         }
